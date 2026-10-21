@@ -1,0 +1,365 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Admin Scanner | STRINGHINIFEST</title>
+  <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;700&family=Pirata+One&display=swap" rel="stylesheet">
+  <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
+
+  <style>
+    :root {
+      --bg-dark: #141414;
+      --orange-goth: #d97d48;
+      --green-ok: #2ecc71;
+      --red-err: #e74c3c;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      background-color: var(--bg-dark);
+      color: #f5f5f5;
+      font-family: 'Montserrat', sans-serif;
+      padding: 20px;
+      max-width: 900px;
+      margin: 0 auto;
+    }
+
+    h1 {
+      font-family: 'Pirata One', cursive;
+      color: var(--orange-goth);
+      font-size: 2.8rem;
+      text-align: center;
+      letter-spacing: 2px;
+      margin-bottom: 15px;
+    }
+
+    #loginOverlay {
+      position: fixed;
+      inset: 0;
+      background: #111;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      z-index: 999;
+      padding: 20px;
+    }
+
+    .pin-box {
+      background: #1e1e1e;
+      padding: 30px;
+      border-radius: 16px;
+      border: 1px solid rgba(255,255,255,0.15);
+      text-align: center;
+      width: 100%;
+      max-width: 350px;
+    }
+
+    input {
+      width: 100%;
+      padding: 12px;
+      margin: 12px 0;
+      border-radius: 8px;
+      border: 1px solid #444;
+      background: #121212;
+      color: #fff;
+      text-align: center;
+      font-size: 1.1rem;
+    }
+
+    button {
+      padding: 12px 18px;
+      border: none;
+      border-radius: 8px;
+      font-weight: 700;
+      cursor: pointer;
+      font-family: 'Montserrat', sans-serif;
+      transition: 0.2s;
+    }
+
+    .btn-primary {
+      background: var(--orange-goth);
+      color: #121212;
+      width: 100%;
+    }
+
+    .stats-bar {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+      gap: 12px;
+      margin-bottom: 20px;
+    }
+
+    .stat-card {
+      background: #202020;
+      padding: 15px;
+      border-radius: 12px;
+      text-align: center;
+      border: 1px solid rgba(255,255,255,0.08);
+    }
+
+    .stat-card h3 {
+      font-size: 1.6rem;
+      color: var(--orange-goth);
+    }
+
+    .scanner-box {
+      background: #1e1e1e;
+      padding: 18px;
+      border-radius: 16px;
+      margin-bottom: 20px;
+      text-align: center;
+      border: 1px solid rgba(255,255,255,0.12);
+    }
+
+    #reader {
+      width: 100%;
+      max-width: 400px;
+      margin: 0 auto 15px auto;
+      border-radius: 12px;
+      overflow: hidden;
+    }
+
+    #scanResultCard {
+      display: none;
+      background: #262626;
+      border: 2px solid var(--orange-goth);
+      border-radius: 14px;
+      padding: 18px;
+      margin-top: 15px;
+      text-align: left;
+    }
+
+    .badge {
+      display: inline-block;
+      padding: 4px 10px;
+      border-radius: 6px;
+      font-size: 0.78rem;
+      font-weight: 700;
+    }
+
+    .badge-success { background: rgba(46, 204, 113, 0.2); color: var(--green-ok); }
+    .badge-danger { background: rgba(231, 76, 60, 0.2); color: var(--red-err); }
+
+    .action-buttons {
+      display: flex;
+      gap: 10px;
+      margin-top: 15px;
+      flex-wrap: wrap;
+    }
+
+    .btn-checkin { background: var(--green-ok); color: #111; flex: 1; }
+    .btn-pay { background: #3498db; color: #fff; flex: 1; }
+
+    .table-container {
+      background: #1e1e1e;
+      border-radius: 14px;
+      padding: 15px;
+      overflow-x: auto;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.85rem;
+    }
+
+    th, td {
+      padding: 10px;
+      text-align: left;
+      border-bottom: 1px solid #333;
+    }
+
+    th { color: var(--orange-goth); }
+  </style>
+</head>
+<body>
+
+  <div id="loginOverlay">
+    <div class="pin-box">
+      <h2 style="color: var(--orange-goth); margin-bottom: 8px;">ACCESO ADMIN</h2>
+      <p style="font-size: 0.85rem; color: #aaa;">Ingresa tu PIN para escanear boletos de StringhiniFest</p>
+      <input type="password" id="pinInput" placeholder="PIN (3010)" />
+      <button class="btn-primary" id="btnLogin">Entrar al Escáner</button>
+    </div>
+  </div>
+
+  <h1>STRINGHINIFEST | ADMIN SCANNER</h1>
+
+  <div class="stats-bar">
+    <div class="stat-card">
+      <h3 id="totalRegistrados">0</h3>
+      <p style="font-size: 0.8rem;">Registrados</p>
+    </div>
+    <div class="stat-card">
+      <h3 id="totalAdentro">0</h3>
+      <p style="font-size: 0.8rem;">Dentro de la Fiesta</p>
+    </div>
+    <div class="stat-card">
+      <h3 id="totalRecaudado">$0</h3>
+      <p style="font-size: 0.8rem;">Pagos Confirmados</p>
+    </div>
+  </div>
+
+  <div class="scanner-box">
+    <h3 style="margin-bottom: 10px;">Escanear Código QR de Entrada</h3>
+    <div id="reader"></div>
+
+    <div id="scanResultCard">
+      <h3 id="resNombre" style="color: var(--orange-goth); margin-bottom: 6px;"></h3>
+      <p><strong>Teléfono:</strong> <span id="resTelefono"></span></p>
+      <p><strong>Método elegido:</strong> <span id="resMetodo"></span> ($80 MXN)</p>
+      <p style="margin-top: 6px;"><strong>Estado de Pago:</strong> <span id="resPagado"></span></p>
+      <p style="margin-top: 6px;"><strong>Estado de Acceso:</strong> <span id="resAsistio"></span></p>
+
+      <div class="action-buttons">
+        <button class="btn-pay" id="btnTogglePago">Marcar $80 Pagado</button>
+        <button class="btn-checkin" id="btnConfirmarEntrada">Dar Acceso a la Fiesta</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="table-container">
+    <h3 style="margin-bottom: 12px;">Lista de Invitados en Tiempo Real</h3>
+    <table>
+      <thead>
+        <tr>
+          <th>Nombre</th>
+          <th>Teléfono</th>
+          <th>Método</th>
+          <th>Pagó $80</th>
+          <th>Entró</th>
+        </tr>
+      </thead>
+      <tbody id="listaInvitados"></tbody>
+    </table>
+  </div>
+
+  <!-- Firebase Configurado con tus credenciales -->
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+    import { getAnalytics } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-analytics.js";
+    import { getDatabase, ref, onValue, update, get } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyDdTZvEVW7TGOSqdtOug3go2EdZUETKpis",
+      authDomain: "stringhinifesthalloween.firebaseapp.com",
+      databaseURL: "https://stringhinifesthalloween-default-rtdb.firebaseio.com",
+      projectId: "stringhinifesthalloween",
+      storageBucket: "stringhinifesthalloween.firebasestorage.app",
+      messagingSenderId: "623192376195",
+      appId: "1:623192376195:web:b7f434c1db57728e552cb6",
+      measurementId: "G-RRBF8TLK21"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const analytics = getAnalytics(app);
+    const db = getDatabase(app);
+
+    const ADMIN_PIN = "3010";
+    let currentScannedId = null;
+    let currentGuestData = null;
+
+    document.getElementById("btnLogin").addEventListener("click", () => {
+      const pin = document.getElementById("pinInput").value;
+      if (pin === ADMIN_PIN) {
+        document.getElementById("loginOverlay").style.display = "none";
+        iniciarScanner();
+      } else {
+        alert("PIN incorrecto");
+      }
+    });
+
+    const invitadosRef = ref(db, "invitados_halloween");
+    onValue(invitadosRef, (snapshot) => {
+      const data = snapshot.val() || {};
+      const tbody = document.getElementById("listaInvitados");
+      tbody.innerHTML = "";
+
+      let totalReg = 0;
+      let totalIn = 0;
+      let totalDinero = 0;
+
+      Object.values(data).forEach((inv) => {
+        totalReg++;
+        if (inv.asistio) totalIn++;
+        if (inv.pagado) totalDinero += 80;
+
+        const tr = document.createElement("tr");
+        tr.innerHTML = `
+          <td>${inv.nombre}</td>
+          <td>${inv.telefono}</td>
+          <td>${inv.metodoPago}</td>
+          <td><span class="badge ${inv.pagado ? 'badge-success' : 'badge-danger'}">${inv.pagado ? 'SÍ' : 'NO'}</span></td>
+          <td><span class="badge ${inv.asistio ? 'badge-success' : 'badge-danger'}">${inv.asistio ? 'ADENTRO' : 'PENDIENTE'}</span></td>
+        `;
+        tbody.appendChild(tr);
+      });
+
+      document.getElementById("totalRegistrados").textContent = totalReg;
+      document.getElementById("totalAdentro").textContent = totalIn;
+      document.getElementById("totalRecaudado").textContent = `$${totalDinero} MXN`;
+    });
+
+    function iniciarScanner() {
+      const html5QrcodeScanner = new Html5QrcodeScanner(
+        "reader",
+        { fps: 10, qrbox: { width: 250, height: 250 } },
+        false
+      );
+
+      html5QrcodeScanner.render(async (decodedText) => {
+        currentScannedId = decodedText.trim();
+        const guestRef = ref(db, `invitados_halloween/${currentScannedId}`);
+        const snap = await get(guestRef);
+
+        const card = document.getElementById("scanResultCard");
+        card.style.display = "block";
+
+        if (!snap.exists()) {
+          document.getElementById("resNombre").textContent = "❌ QR NO VÁLIDO O NO ENCONTRADO";
+          return;
+        }
+
+        currentGuestData = snap.val();
+        renderScannedGuest(currentGuestData);
+      });
+    }
+
+    function renderScannedGuest(guest) {
+      document.getElementById("resNombre").textContent = guest.nombre;
+      document.getElementById("resTelefono").textContent = guest.telefono;
+      document.getElementById("resMetodo").textContent = guest.metodoPago;
+
+      document.getElementById("resPagado").innerHTML = guest.pagado
+        ? `<span class="badge badge-success">PAGADO ($80 MXN)</span>`
+        : `<span class="badge badge-danger">PENDIENTE DE PAGO</span>`;
+
+      document.getElementById("resAsistio").innerHTML = guest.asistio
+        ? `<span class="badge badge-danger">⚠️ ESTE QR YA FUE USADO PARA ENTRAR</span>`
+        : `<span class="badge badge-success">LISTO PARA ENTRAR</span>`;
+    }
+
+    document.getElementById("btnTogglePago").addEventListener("click", async () => {
+      if (!currentScannedId || !currentGuestData) return;
+      const nuevoEstadoPago = !currentGuestData.pagado;
+      await update(ref(db, `invitados_halloween/${currentScannedId}`), {
+        pagado: nuevoEstadoPago
+      });
+      currentGuestData.pagado = nuevoEstadoPago;
+      renderScannedGuest(currentGuestData);
+    });
+
+    document.getElementById("btnConfirmarEntrada").addEventListener("click", async () => {
+      if (!currentScannedId || !currentGuestData) return;
+      await update(ref(db, `invitados_halloween/${currentScannedId}`), {
+        asistio: true
+      });
+      currentGuestData.asistio = true;
+      renderScannedGuest(currentGuestData);
+    });
+  </script>
+</body>
+</html>
